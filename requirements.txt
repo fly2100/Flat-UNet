@@ -1,0 +1,5 @@
+albumentations==1.0.0
+astropy @ file:///opt/conda/conda-bld/astropy_1657786094003/work
+torch==1.12.1
+torchsummary==1.5.1
+torchvision==0.13.1
