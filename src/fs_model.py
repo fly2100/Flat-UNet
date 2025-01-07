@@ -19,7 +19,7 @@ class Flat_Unet(nn.Module):
     out_channels : int
         Number of output channels for the final segmentation map.
     is_simp : bool
-        Determines whether to use the simplified self-attention block (SCSA_ConvBlock) 
+        Determines whether to use the simplified channel attention block (SCA_ConvBlock)
         or the more complex version (CSA_ConvBlock).
 
     Methods:
@@ -31,18 +31,20 @@ class Flat_Unet(nn.Module):
         pass
     """
 
-    def __init__(self, num_layers=4, flat_channels=4, out_channels=1, is_simp=True):
+    def __init__(self, simp_list, num_layers=4, flat_channels=4, out_channels=1):
         super().__init__()
-        self.is_simp = is_simp
+        self.simp_list = simp_list
         self.conv = nn.Conv2d(1, flat_channels, kernel_size=3, padding=1)
 
         self.e_list = nn.ModuleList()
         self.d_list = nn.ModuleList()
-        for _ in range(num_layers):
-            self.e_list.append(EncoderBlock(flat_channels, self.is_simp))
-            self.d_list.append(DecoderBlock(flat_channels, self.is_simp))
+        for i in range(num_layers):
+            is_simp_encoder = self.simp_list[i]
+            is_simp_decoder = self.simp_list[num_layers - i - 1]
+            self.e_list.append(EncoderBlock(flat_channels, is_simp_encoder))
+            self.d_list.append(DecoderBlock(flat_channels, is_simp_decoder))
 
-        self.b = CSA_ConvBlock(flat_channels)
+        self.b = SCA_ConvBlock(flat_channels) if self.simp_list[-1] else CSA_ConvBlock(flat_channels)
 
         self.outputs = nn.Conv2d(flat_channels, out_channels, kernel_size=1, padding=0)
 
@@ -110,9 +112,9 @@ class CSA_ConvBlock(nn.Module):
         return r
 
 
-class SCSA_ConvBlock(nn.Module):
+class SCA_ConvBlock(nn.Module):
     """
-    Simplified Channel Self-Attention (SCSA) ConvBlock: A simplified self-attention 
+    Simplified Channel Attention (SCA) ConvBlock: A simplified channel attention
     block for faster computation.
 
     Attributes:
@@ -162,7 +164,7 @@ class EncoderBlock(nn.Module):
     c : int
         Number of input and output channels for the block.
     is_simp : bool
-        Whether to use the simplified self-attention block.
+        Whether to use the simplified channel attention block.
 
     Methods:
     --------
@@ -177,7 +179,7 @@ class EncoderBlock(nn.Module):
 
     def __init__(self, c, is_simp=True):
         super().__init__()
-        self.conv = SCSA_ConvBlock(c) if is_simp else CSA_ConvBlock(c)
+        self.conv = SCA_ConvBlock(c) if is_simp else CSA_ConvBlock(c)
         self.pool = nn.MaxPool2d((2, 2))
 
     def forward(self, inputs):
@@ -195,7 +197,7 @@ class DecoderBlock(nn.Module):
     c : int
         Number of input and output channels for the block.
     is_simp : bool
-        Whether to use the simplified self-attention block.
+        Whether to use the simplified channel attention block.
 
     Methods:
     --------
@@ -210,7 +212,7 @@ class DecoderBlock(nn.Module):
         super().__init__()
         self.up = nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)
         self.conv_down = nn.Conv2d(2 * c, c, kernel_size=1, stride=1, padding=0)
-        self.conv = SCSA_ConvBlock(c) if is_simp else CSA_ConvBlock(c)
+        self.conv = SCA_ConvBlock(c) if is_simp else CSA_ConvBlock(c)
 
     def forward(self, inputs, skip):
         x = self.up(inputs)

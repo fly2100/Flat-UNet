@@ -25,7 +25,7 @@ parser.add_argument("--channels", type=int, default=g_channels, help="channels")
 parser.add_argument("--size", type=tuple, default=g_img_size, help="input size")
 parser.add_argument("--cuda", type=bool, default=g_cuda, help="cuda is available?")
 parser.add_argument("--num_workers", type=int, default=g_num_workers)
-parser.add_argument("--is_simp", type=bool, default=g_simp, help="simplified CSA_ConvBlocks")
+parser.add_argument("--simp_list", type=list, default=g_simp_list, help="CSA_ConvBlocks or SCA_ConvBlocks?")
 
 
 def start(args):
@@ -44,7 +44,7 @@ def start(args):
                                         args.cuda,
                                         args.num_workers,
                                         args.save_result_path,
-                                        is_simp=args.is_simp,
+                                        simp_list=args.simp_list,
                                         filament_masks=args.filament_masks)
     flat_unet_tester.go()
 
@@ -58,12 +58,12 @@ class Flat_Unet_Tester:
                  cuda,
                  num_workers,
                  save_result_path,
-                 is_simp=True,
+                 simp_list=[],
                  filament_masks=None,
                  ):
         self.channels = channels
         self.img_size = img_size
-        self.is_simp = is_simp
+        self.simp_list = simp_list
         self.checkpoint_path = checkpoint_path
         self.device = torch.device("cuda" if cuda else "cpu")
         self.testing_dataset = Halpha_Dataset(ha_fits, img_size, filament_masks)
@@ -129,8 +129,7 @@ class Flat_Unet_Tester:
 
     def go(self):
         loss_fn = nn.BCEWithLogitsLoss()
-        model = Flat_Unet(flat_channels=self.channels, is_simp=self.is_simp)
-        # model = build_unet()
+        model = Flat_Unet(self.simp_list, flat_channels=self.channels)
         model.float()
         model.to(self.device)
 

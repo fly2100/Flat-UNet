@@ -17,6 +17,7 @@ parser.add_argument("--channels", type=int, default=g_channels, help="channels")
 parser.add_argument("--size", type=tuple, default=g_img_size, help="input size")
 parser.add_argument("--cuda", type=bool, default=g_cuda, help="cuda is available?")
 parser.add_argument("--num_workers", type=int, default=g_num_workers)
+parser.add_argument("--simp_list", type=list, default=g_simp_list, help="CSA_ConvBlocks or SCA_ConvBlocks?")
 
 
 def start(args):
@@ -30,6 +31,7 @@ def start(args):
                                         args.cuda,
                                         args.num_workers,
                                         args.save_result_path,
+                                        simp_list=args.simp_list,
                                         filament_masks=args.filament_masks)
     flat_unet_tester.go()
 

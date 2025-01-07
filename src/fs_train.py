@@ -5,7 +5,7 @@ from torch.utils.data import random_split, DataLoader
 
 from fs_model import Flat_Unet
 from fs_configs import *
-from fs_loss import DiceBCELoss, DiceLoss, FocalLoss
+
 from fs_dataset import Halpha_Dataset
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
@@ -22,10 +22,10 @@ parser.add_argument("--cuda", type=bool, default=g_cuda, help="cuda is available
 parser.add_argument("--batch_size", type=int, default=g_batch_size)
 parser.add_argument("--epochs", type=int, default=g_num_epochs)
 parser.add_argument("--lr", type=int, default=g_lr, help="learning rate")
-parser.add_argument("--is_simp", type=bool, default=True, help="simplified CSA_ConvBlocks")
+parser.add_argument("--simp_list", type=list, default=g_simp_list, help="CSA_ConvBlocks or SCA_ConvBlocks?")
 parser.add_argument("--num_workers", type=int, default=g_num_workers)
 parser.add_argument("--val_percent", type=float, default=g_val_percent, help="dataset split")
-parser.add_argument("--is_summary", type=bool, default=g_simp, help="model summary")
+parser.add_argument("--is_summary", type=bool, default=g_is_summary, help="model summary")
 
 
 def start(args):
@@ -50,7 +50,7 @@ def start(args):
                                               args.num_workers,
                                               args.epochs,
                                               args.lr,
-                                              is_simp=args.is_simp,
+                                              simp_list=args.simp_list,
                                               is_summary=args.is_summary,
                                               filament_masks=args.filament_masks,
                                               val_percent=args.val_percent)
@@ -106,7 +106,7 @@ class Flat_Unet_Trainer:
                  num_workers,
                  num_epochs,
                  lr,
-                 is_simp=True,
+                 simp_list=[1, 1, 1, 1, 1],
                  is_summary=False,
                  filament_masks=None,
                  val_percent=0.1):
@@ -116,7 +116,7 @@ class Flat_Unet_Trainer:
         self.img_size = img_size
         self.num_epochs = num_epochs
         self.lr = lr
-        self.is_simp = is_simp
+        self.simp_list = simp_list
 
         self.channels = channels
 
@@ -191,8 +191,7 @@ class Flat_Unet_Trainer:
 
         best_valid_loss = float("inf")
 
-        model = Flat_Unet(flat_channels=self.channels, is_simp=self.is_simp)
-        # model = build_unet()
+        model = Flat_Unet(self.simp_list, flat_channels=self.channels)
         model.float()
         model = model.to(self.device)
 
